@@ -1,6 +1,14 @@
-import React, {useState, useEffect} from "react";
-import styled from 'styled-components';
-
+import React, {useState, useEffect, useCallback} from "react";
+import SlideNumber from "../components/SlideNumber";
+import {
+    NextArrow,
+    PaginationContainer,
+    PaginationDot,
+    PrevArrow,
+    SliderContainer,
+    SliderImage,
+    SliderText
+} from "./styles";
 
 interface Slide {
     img: string;
@@ -17,70 +25,6 @@ interface SliderProps {
     delay?: number;
 }
 
-const SliderContainer = styled.div`
-  position: relative;
-  max-width: 600px;
-  margin: 0 auto;
-`;
-
-const SliderImage = styled.img`
-  width: 100%;
-  height: auto;
-`;
-
-const SliderText = styled.div`
-  position: absolute;
-  bottom: 3em;
-  left: 14em;
-  font-size: 18px;
-  color: white;
-\`         ;
-`;
-const NumberImage = styled.div`
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  font-size: 20px;
-  color: white;
-\`        ;
-`;
-
-
-const ArrowButton = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  position: absolute;
-  top: 45%;
-  font-size: 40px;
-  color: white;
-`;
-
-const PrevArrow = styled(ArrowButton)`
-  left: 10px;
-`;
-
-const NextArrow = styled(ArrowButton)`
-  right: 10px;
-`;
-
-
-const PaginationContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  margin-top: 10px;
-`;
-
-const PaginationDot = styled.button<{ active: boolean }>`
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: none;
-  margin: 0 5px;
-  background-color: ${(props) => (props.active ? "black" : "gray")};
-  cursor: pointer;
-`;
-
 const Slider: React.FC<SliderProps> = ({
                                            slides,
                                            loop = false,
@@ -95,11 +39,16 @@ const Slider: React.FC<SliderProps> = ({
 
     const totalSlides = slides.length;
 
+    const handleSlideChange = (delta: number) => {
+        const nextIndex = (currentIndex + delta + totalSlides) % totalSlides;
+        setCurrentIndex(nextIndex);
+    };
+
     useEffect(() => {
         let interval: NodeJS.Timeout;
 
         if (isAutoEnabled) {
-            interval = setInterval(() => handleSlideChange(1), delay * 1000);
+            interval = setInterval(() => handleSlideChange(1), delay * 100);
         }
 
         return () => {
@@ -107,26 +56,23 @@ const Slider: React.FC<SliderProps> = ({
         };
     }, [currentIndex, isAutoEnabled, delay]);
 
-    const handleSlideChange = (delta: number) => {
-        const nextIndex = (currentIndex + delta + slides.length) % slides.length;
-        setCurrentIndex(nextIndex);
-    };
 
-    const handlePagination = (index: number) => {
+    const handlePagination = useCallback((index: number) => {
         setCurrentIndex(index);
-    };
+    }, [setCurrentIndex]);
 
-    const handleMouseEnter = () => {
+    const handleMouseEnter = useCallback(() => {
         if (auto) {
             setIsAutoEnabled(false);
         }
-    };
+    }, [auto, setIsAutoEnabled]);
 
-    const handleMouseLeave = () => {
-        if (auto) {
+
+    const handleMouseLeave = useCallback(() => {
+        if (auto && !stopMouseHover) {
             setIsAutoEnabled(true);
         }
-    };
+    }, [auto, stopMouseHover, setIsAutoEnabled]);
 
     const renderNavButtons = () => {
         return (
@@ -163,9 +109,7 @@ const Slider: React.FC<SliderProps> = ({
 
             {pages && renderPaginationDots()}
 
-            <NumberImage>
-                {currentIndex + 1}/{slides.length}
-            </NumberImage>
+            <SlideNumber currentIndex={currentIndex} totalSlides={totalSlides} />
         </SliderContainer>
     );
 };
