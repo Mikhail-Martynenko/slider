@@ -54,7 +54,7 @@ const Slider: React.FC<SliderProps> = ({slides, loop, navs, pages, auto, stopMou
         let interval: NodeJS.Timeout;
 
         if (isAutoEnabled) {
-            interval = setInterval(() => handleSlideChange(1), delay * 100);
+            interval = setInterval(() => handleSlideChange(1), delay * 1000);
         }
 
         return () => {
