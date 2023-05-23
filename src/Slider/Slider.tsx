@@ -9,6 +9,8 @@ import {
     SliderImage,
     SliderText
 } from "./styles";
+import PaginationDots from "../components/PaginationDots";
+import NavButtons from "../components/NavButtons";
 
 interface Slide {
     img: string;
@@ -17,32 +19,36 @@ interface Slide {
 
 interface SliderProps {
     slides: Slide[];
-    loop?: boolean;
-    navs?: boolean;
-    pages?: boolean;
-    auto?: boolean;
-    stopMouseHover?: boolean;
-    delay?: number;
+    loop: boolean;
+    navs: boolean;
+    pages: boolean;
+    auto: boolean;
+    stopMouseHover: boolean;
+    delay: number;
 }
 
-const Slider: React.FC<SliderProps> = ({
-                                           slides,
-                                           loop = false,
-                                           navs = false,
-                                           pages = false,
-                                           auto = false,
-                                           stopMouseHover = false,
-                                           delay = 3,
-                                       }) => {
+const Slider: React.FC<SliderProps> = ({slides, loop, navs, pages, auto, stopMouseHover, delay}) => {
+
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isAutoEnabled, setIsAutoEnabled] = useState(auto);
+    const [isMouseOver, setIsMouseOver] = useState(stopMouseHover);
 
     const totalSlides = slides.length;
 
-    const handleSlideChange = (delta: number) => {
-        const nextIndex = (currentIndex + delta + totalSlides) % totalSlides;
-        setCurrentIndex(nextIndex);
-    };
+    const handleSlideChange = useCallback(
+        (delta: number) => {
+            let nextIndex = currentIndex + delta;
+
+            if (loop) {
+                nextIndex = (nextIndex + totalSlides) % totalSlides;
+            } else {
+                nextIndex = Math.max(0, Math.min(nextIndex, totalSlides - 1));
+            }
+
+            setCurrentIndex(nextIndex);
+        },
+        [currentIndex, totalSlides, loop]
+    );
 
     useEffect(() => {
         let interval: NodeJS.Timeout;
@@ -54,7 +60,7 @@ const Slider: React.FC<SliderProps> = ({
         return () => {
             clearInterval(interval);
         };
-    }, [currentIndex, isAutoEnabled, delay]);
+    }, [currentIndex, isAutoEnabled, delay, isMouseOver]);
 
 
     const handlePagination = useCallback((index: number) => {
@@ -62,44 +68,23 @@ const Slider: React.FC<SliderProps> = ({
     }, [setCurrentIndex]);
 
     const handleMouseEnter = useCallback(() => {
-        if (auto) {
+        if (auto && stopMouseHover) {
+            setIsMouseOver(true);
             setIsAutoEnabled(false);
         }
-    }, [auto, setIsAutoEnabled]);
-
+    }, [auto, setIsMouseOver, setIsAutoEnabled, stopMouseHover]);
 
     const handleMouseLeave = useCallback(() => {
-        if (auto && !stopMouseHover) {
+        if (auto && stopMouseHover) {
+            setIsMouseOver(false);
             setIsAutoEnabled(true);
         }
-    }, [auto, stopMouseHover, setIsAutoEnabled]);
-
-    const renderNavButtons = () => {
-        return (
-            <>
-                <PrevArrow onClick={() => handleSlideChange(-1)}>&#x2190;</PrevArrow>
-                <NextArrow onClick={() => handleSlideChange(1)}>&#x2192;</NextArrow>
-            </>
-        );
-    };
-
-    const renderPaginationDots = () => {
-        return (
-            <PaginationContainer>
-                {slides.map((_, index) => (
-                    <PaginationDot
-                        key={index}
-                        active={index === currentIndex}
-                        onClick={() => handlePagination(index)}
-                    />
-                ))}
-            </PaginationContainer>
-        );
-    };
+    }, [auto, setIsMouseOver, setIsAutoEnabled, stopMouseHover]);
 
     return (
         <SliderContainer onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
-            {navs && renderNavButtons()}
+            {navs && <NavButtons handleSlideChange={handleSlideChange} />}
+
             {slides.map((slide, index) => (
                 <div key={index} style={{display: index === currentIndex ? "block" : "none"}}>
                     <SliderImage src={slide.img} alt={`Slide ${index + 1}`} />
@@ -107,7 +92,10 @@ const Slider: React.FC<SliderProps> = ({
                 </div>
             ))}
 
-            {pages && renderPaginationDots()}
+            {pages && <PaginationDots
+                slides={slides} currentIndex={currentIndex} loop={loop} totalSlides={totalSlides}
+                handlePagination={handlePagination}
+            />}
 
             <SlideNumber currentIndex={currentIndex} totalSlides={totalSlides} />
         </SliderContainer>
